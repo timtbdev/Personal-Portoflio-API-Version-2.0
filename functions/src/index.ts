@@ -63,10 +63,13 @@ export interface Portfolio {
     image_description: String,
     info: String,
     text: String,
-    date_from: String,
-    date_to: String,
+    date_from: Date,
+    date_to: Date,
     order: number,
-    header: String
+    header: String,
+    video_url: String,
+    link_to_share: String,
+    type: number
 }
 
 // BUTTON ------------------------------------------------
@@ -75,6 +78,26 @@ export interface Button {
     owner_id: String,
     title: String,
     url: String,
+    type: String,
+    order: number
+}
+
+// CATEGORY ----------------------------------------------
+export interface Category {
+    id: String,
+    title: String,
+    type: number,
+    icon: String,
+    icon_description: String,
+    order: number
+}
+
+// SCREENSHOT --------------------------------------------
+export interface ScreenShot {
+    id: String,
+    owner_id: String,
+    url: String,
+    description: String,
     order: number
 }
 
@@ -84,7 +107,9 @@ export interface Experience {
     owner_id: String,
     title: String,
     company: String,
-    date: String,
+    info: String,
+    date_from: Date,
+    date_to: Date,
     location: String,
     logo: String,
     logo_description: String,
@@ -100,6 +125,27 @@ export interface Task {
     order: number
 }
 
+// Location ----------------------------------------------
+export interface Location{
+    id: String,
+    owner_id: String,
+    latitude: number,
+    longitude: number
+}
+
+// RESOURCE --------------------------------------------
+export interface Resource {
+    id: String,
+    owner_id: String,
+    title: String,
+    image: String,
+    image_description: String,
+    date_from: Date,
+    date_to: Date,
+    order: number,
+    url: String,
+}
+
 // All response -------------------------------------------
 export interface All{
     welcome: Welcome[],
@@ -110,7 +156,11 @@ export interface All{
     portfolio: Portfolio[],
     experience: Experience[],
     button: Button[],
-    task: Task[]
+    task: Task[],
+    location: Location[],
+    category: Category[],
+    screenshot: ScreenShot[],
+    resource: Resource[]
 }
 
 // API ALL RESPONSE --------------------------------------------------------------------------------------------------------------------
@@ -207,10 +257,13 @@ export const all = functions.https.onRequest(async (request, response) => {
             obj.image_description = item.data().image_description
             obj.info = item.data().info
             obj.text = item.data().text
-            obj.date_from = item.data().date_from
-            obj.date_to = item.data().date_to
+            obj.date_from = item.data().date_from.toDate()
+            obj.date_to = item.data().date_to.toDate()
             obj.order = item.data().order
             obj.header = item.data().header
+            obj.type = item.data().type
+            obj.link_to_share = item.data().link_to_share
+            obj.video_url = item.data().video_url
             portfolioResult.push(obj)
         })
         data.portfolio = portfolioResult
@@ -224,10 +277,40 @@ export const all = functions.https.onRequest(async (request, response) => {
             obj.owner_id = item.data().owner_id
             obj.title = item.data().title
             obj.url = item.data().url
+            obj.type = item.data().type
             obj.order = item.data().order
             buttonResult.push(obj)
         })
         data.button = buttonResult
+
+        // Category
+        const categoryHolder = await admin.firestore().collection('portfolio/portfolio/category').orderBy("type").get()
+        const categoryResult: Category[] =[]
+        categoryHolder.forEach(async item =>{
+            const obj = {} as Category
+            obj.id = item.id
+            obj.title = item.data().title
+            obj.type = item.data().type
+            obj.icon = item.data().icon
+            obj.icon_description = item.data().icon_description
+            obj.order = item.data().order
+            categoryResult.push(obj)
+        })
+        data.category = categoryResult
+
+        // Screenshot
+        const screenShotHolder = await admin.firestore().collection('portfolio/portfolio/screenshot').orderBy("owner_id").get()
+        const screenShotResult: ScreenShot[] =[]
+         screenShotHolder.forEach(async item =>{
+            const obj = {} as ScreenShot
+            obj.id = item.id
+            obj.owner_id = item.data().owner_id
+            obj.url = item.data().url
+            obj.description = item.data().description
+            obj.order = item.data().order
+            screenShotResult.push(obj)
+        })
+        data.screenshot = screenShotResult
 
         // Experience
         const experienceHolder = await admin.firestore().collection("portfolio/experience/items").orderBy("order").get()
@@ -238,7 +321,9 @@ export const all = functions.https.onRequest(async (request, response) => {
             obj.owner_id = item.data().owner_id
             obj.title = item.data().title
             obj.company = item.data().company
-            obj.date = item.data().date
+            obj.info = item.data().info
+            obj.date_from = item.data().date_from.toDate()
+            obj.date_to = item.data().date_to.toDate()
             obj.location = item.data().location
             obj.logo = item.data().logo
             obj.logo_description = item.data().logo_description
@@ -261,6 +346,39 @@ export const all = functions.https.onRequest(async (request, response) => {
             taskResult.push(obj)
         })
         data.task = taskResult
+
+        // Location
+        const locationHolder = await admin.firestore().collection("portfolio/location/items").orderBy("owner_id").get()
+        const locationResult: Location[] =[]
+        locationHolder.forEach(async item =>{
+            const obj = {} as Location
+            obj.id = item.id
+            obj.owner_id = item.data().owner_id
+            const geoPoint: admin.firestore.GeoPoint = item.data().location 
+            obj.latitude = geoPoint.latitude
+            obj.longitude = geoPoint.longitude
+            locationResult.push(obj)
+        })
+        data.location = locationResult
+
+
+         // Resource
+         const resourceHolder = await admin.firestore().collection("portfolio/resources/items").orderBy("owner_id").get()
+         const resourceResult: Resource[] =[]
+         resourceHolder.forEach(async item =>{
+             const obj = {} as Resource
+             obj.id = item.id
+             obj.owner_id = item.data().owner_id
+             obj.title = item.data().title
+             obj.image = item.data().image
+             obj.image_description = item.data().image_description
+             obj.date_from = item.data().date_from.toDate()
+             obj.date_to = item.data().date_to.toDate()
+             obj.order = item.data().order
+             obj.url = item.data().url
+             resourceResult.push(obj)
+         })
+         data.resource = resourceResult
 
         response.send(data)
     }
